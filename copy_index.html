@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maszyna losująca 🎰</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#0f1733; --text:#e8ecff; --muted:#a9b3e6;
+      --border:rgba(255,255,255,.12); --accent:#7dd3fc;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:18px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 20% 0%, #1b2a66 0%, var(--bg) 60%);
+    }
+    h1{
+      margin:0 0 14px 0;
+      font-size: clamp(28px, 5vw, 44px);
+      letter-spacing:.4px;
+      text-align:center;
+    }
+    .sub{
+      text-align:center;
+      color:var(--muted);
+      margin-bottom:18px;
+      font-size: 14px;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:16px;
+      max-width: 1100px;
+      margin: 0 auto;
+      align-items:start;
+    }
+    @media (max-width: 860px){
+      body{padding:14px}
+      .layout{grid-template-columns:1fr}
+    }
+
+    .card{
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      backdrop-filter: blur(8px);
+    }
+
+    .wheelWrap{
+      display:grid;
+      place-items:center;
+      gap:12px;
+      padding: 10px;
+    }
+    canvas{
+      width:min(92vw, 520px);
+      height:auto;
+      max-width:520px;
+      border-radius:18px;
+      background: rgba(0,0,0,.18);
+      border:1px solid var(--border);
+    }
+
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+    }
+
+    button{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 600;
+      transition: transform .05s ease, background .2s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(255,255,255,.12); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: rgba(125, 211, 252, .18);
+      border-color: rgba(125, 211, 252, .45);
+    }
+    button.danger{
+      background: rgba(248, 113, 113, .14);
+      border-color: rgba(248, 113, 113, .4);
+    }
+    button:disabled{ opacity:.5; cursor:not-allowed; }
+
+    label.chk{
+      display:flex; gap:8px; align-items:center;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight:600;
+    }
+    input[type="checkbox"]{ transform: scale(1.15); }
+
+    .result{
+      text-align:center;
+      font-size: clamp(16px, 3.5vw, 22px);
+      font-weight: 800;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid var(--border);
+      min-width:min(92vw, 520px);
+    }
+    .result small{ display:block; font-size:12px; color:var(--muted); font-weight:600; margin-top:6px; }
+
+    .controls{
+      display:grid;
+      gap:12px;
+    }
+
+    textarea{
+      width:100%;
+      min-height:120px;
+      resize:vertical;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline:none;
+      line-height:1.35;
+    }
+    textarea::placeholder{ color: rgba(232,236,255,.55); }
+
+    .hint{ color: var(--muted); font-size: 13px; margin-top: -6px; }
+
+    .lists{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 540px){
+      .lists{ grid-template-columns:1fr; }
+    }
+
+    .listBox{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px 12px;
+      background: rgba(0,0,0,.18);
+      min-height: 80px;
+    }
+    .listBox h3{
+      margin:0 0 8px 0;
+      font-size: 13px;
+      letter-spacing:.3px;
+      color: var(--muted);
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .pills{ display:flex; flex-wrap:wrap; gap:6px; }
+    .pill{
+      padding:6px 8px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .footerNote{
+      margin-top:10px;
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+    a{ color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>Maszyna losująca 🎰</h1>
+  <div class="sub">Statycznie (GitHub Pages), zapis imion/opcji/wylosowanych w ciasteczkach, uczciwe losowanie.</div>
+
+  <div class="layout">
+    <!-- LEFT: WHEEL -->
+    <section class="card wheelWrap">
+      <canvas id="wheel" width="560" height="560" aria-label="Koło losowania"></canvas>
+
+      <div class="result" id="result">
+        Wynik: —
+        <small id="resultMeta">Dodaj imiona po prawej, potem kliknij „Zakręć”.</small>
+      </div>
+
+      <div class="row">
+        <button class="primary" id="spinBtn">Zakręć</button>
+        <label class="chk" title="Jeśli włączone, losujemy tylko osoby, które nie były jeszcze wylosowane.">
+          <input type="checkbox" id="onlyNewChk" />
+          Losuj tylko nowe osoby
+        </label>
+        <button class="danger" id="clearDrawnBtn" title="Usuwa listę wylosowanych (nie usuwa imion).">Wyczyść wylosowane</button>
+      </div>
+
+      <div class="footerNote">
+        Uczciwość: wynik jest losowany <b>przed</b> animacją z równym prawdopodobieństwem wśród dopuszczonych osób (tylko nowe / wszystkie),
+        a animacja tylko dojeżdża do wylosowanego segmentu.
+      </div>
+    </section>
+
+    <!-- RIGHT: CONTROLS -->
+    <section class="card controls">
+      <div>
+        <b>Imiona (po jednym w linii)</b>
+        <textarea id="namesInput" placeholder="Np.
+Ala
+Bartek
+Celina
+Dawid"></textarea>
+        <div class="hint">Zapisuje się automatycznie w cookie. Możesz wkleić listę z Excela / notatnika.</div>
+      </div>
+
+      <div class="row" style="justify-content:flex-start">
+        <button id="saveBtn">Zapisz imiona</button>
+        <button class="danger" id="resetAllBtn" title="Czyści imiona + wylosowanych + opcję (cookie).">Reset wszystko</button>
+      </div>
+
+      <div class="lists">
+        <div class="listBox">
+          <h3>W puli</h3>
+          <div class="pills" id="poolPills"></div>
+        </div>
+
+        <div class="listBox">
+          <h3>Wylosowani</h3>
+          <div class="pills" id="drawnPills"></div>
+        </div>
+      </div>
+
+      <div class="footerNote">
+        GitHub Pages: wrzuć ten plik jako <b>index.html</b> do repo, w ustawieniach repo włącz <i>Pages</i> dla branch (np. main) i folderu root.
+      </div>
+    </section>
+  </div>
+
+<script>
+/** ---------------- Cookies (JSON) ----------------
+ *  Uwaga: cookies mają limit rozmiaru (~4KB na cookie). Dla krótkich list imion OK.
+ *  Jeśli planujesz setki imion, lepsze byłoby localStorage — ale trzymamy się Twojego wymagania: cookies.
+ */
+const COOKIE_KEY = "wheel_state_v1";
+function setCookie(name, value, days=365) {
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = name + "=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; SameSite=Lax";
+}
+function getCookie(name) {
+  const parts = document.cookie.split("; ").map(s => s.split("="));
+  for (const [k, v] of parts) if (k === name) return decodeURIComponent(v || "");
+  return null;
+}
+function deleteCookie(name) {
+  document.cookie = name + "=; Max-Age=0; Path=/; SameSite=Lax";
+}
+
+/** ---------------- State ---------------- */
+let state = {
+  names: ["Ala","Bartek","Celina","Dawid"],
+  drawn: [],
+  onlyNew: false
+};
+
+function loadState() {
+  const raw = getCookie(COOKIE_KEY);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.names) && Array.isArray(parsed.drawn)) {
+      state.names = parsed.names.map(s => String(s).trim()).filter(Boolean);
+      state.drawn = parsed.drawn.map(s => String(s).trim()).filter(Boolean);
+      state.onlyNew = !!parsed.onlyNew;
+    }
+  } catch {}
+}
+
+function saveState() {
+  // odfiltruj duplikaty i puste
+  state.names = uniq(state.names.map(s => s.trim()).filter(Boolean));
+  state.drawn = uniq(state.drawn.map(s => s.trim()).filter(Boolean));
+
+  // usuwamy wylosowanych, których nie ma już na liście imion (żeby nie wisiały)
+  const setNames = new Set(state.names);
+  state.drawn = state.drawn.filter(n => setNames.has(n));
+
+  setCookie(COOKIE_KEY, JSON.stringify(state));
+}
+
+function uniq(arr){
+  const out = [];
+  const seen = new Set();
+  for (const x of arr){
+    const k = x.toLowerCase();
+    if (!seen.has(k)){
+      seen.add(k);
+      out.push(x);
+    }
+  }
+  return out;
+}
+
+function parseNamesFromTextarea(text){
+  return text
+    .split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+/** ---------------- Wheel rendering ---------------- */
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+
+const resultEl = document.getElementById("result");
+const resultMeta = document.getElementById("resultMeta");
+const spinBtn = document.getElementById("spinBtn");
+
+let angle = 0;
+let spinning = false;
+
+function resizeCanvasForHiDPI(){
+  // zachowujemy rozmiar a zwiększamy rozdzielczość
+  const cssW = canvas.clientWidth || 560;
+  const cssH = canvas.clientHeight || 560;
+  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawBottleSVG(x,y, size){
+  // prosta butelka jako „grafika w segmencie/środku”
+  // rysujemy jak SVG w canvas: kształty
+  const s = size;
+  ctx.save();
+  ctx.translate(x, y);
+
+  // cień
+  ctx.beginPath();
+  ctx.ellipse(0, s*0.32, s*0.28, s*0.12, 0, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(0,0,0,.25)";
+  ctx.fill();
+
+  // korpus
+  ctx.beginPath();
+  ctx.roundRect(-s*0.22, -s*0.22, s*0.44, s*0.54, s*0.12);
+  ctx.fillStyle = "rgba(255,255,255,.86)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.15)";
+  ctx.stroke();
+
+  // szyjka
+  ctx.beginPath();
+  ctx.roundRect(-s*0.10, -s*0.44, s*0.20, s*0.26, s*0.08);
+  ctx.fillStyle = "rgba(255,255,255,.86)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.15)";
+  ctx.stroke();
+
+  // korek
+  ctx.beginPath();
+  ctx.roundRect(-s*0.12, -s*0.52, s*0.24, s*0.10, s*0.06);
+  ctx.fillStyle = "rgba(125,211,252,.65)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(125,211,252,.95)";
+  ctx.stroke();
+
+  // etykieta
+  ctx.beginPath();
+  ctx.roundRect(-s*0.18, -s*0.02, s*0.36, s*0.20, s*0.08);
+  ctx.fillStyle = "rgba(125,211,252,.20)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(125,211,252,.55)";
+  ctx.stroke();
+
+  // bąbelki
+  for (let i=0;i<6;i++){
+    const bx = (Math.random()*2-1)*s*0.12;
+    const by = (Math.random()*2-1)*s*0.12 - s*0.10;
+    const br = s*(0.018 + Math.random()*0.02);
+    ctx.beginPath();
+    ctx.arc(bx, by, br, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(125,211,252,.65)";
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawWheel(){
+  const cssW = canvas.clientWidth || 560;
+  const cssH = canvas.clientHeight || 560;
+
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const cx = cssW/2;
+  const cy = cssH/2;
+  const radius = Math.min(cx,cy) - 18;
+
+  const names = state.names.length ? state.names : ["—"];
+  const slice = (Math.PI*2) / names.length;
+
+  // tło koła
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(255,255,255,.04)";
+  ctx.fill();
+
+  // segmenty
+  for (let i=0;i<names.length;i++){
+    const start = angle + i*slice;
+    const end = start + slice;
+
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,radius,start,end);
+    ctx.closePath();
+
+    // „bez podawania kolorów” wprost nie ma sensu przy kole; ale musimy mieć rozróżnienie.
+    // Zrobimy to przez HSL zależne od i (nadal deterministycznie).
+    const hue = (i * 360 / names.length) % 360;
+    ctx.fillStyle = `hsla(${hue}, 80%, 60%, .55)`;
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.stroke();
+
+    // tekst
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(start + slice/2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.font = `700 ${Math.max(12, Math.min(16, radius/22))}px system-ui`;
+    const label = names[i];
+    ctx.fillText(label, radius - 16, 6);
+    ctx.restore();
+  }
+
+  // środek
+  ctx.beginPath();
+  ctx.arc(cx, cy, Math.max(46, radius*0.17), 0, Math.PI*2);
+  ctx.fillStyle = "rgba(0,0,0,.22)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.12)";
+  ctx.stroke();
+
+  // butelka w środku
+  drawBottleSVG(cx, cy+2, Math.max(90, radius*0.32));
+
+  // wskaźnik (góra)
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - radius - 6);
+  ctx.lineTo(cx - 14, cy - radius + 20);
+  ctx.lineTo(cx + 14, cy - radius + 20);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(255,255,255,.92)";
+  ctx.fill();
+}
+
+function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+/** ---------------- Fair random draw ----------------
+ *  Losujemy ZWYCIĘZCĘ równomiernie wśród dopuszczonych.
+ *  Potem dopasowujemy targetAngle, żeby animacja zatrzymała się na jego segmencie.
+ */
+function secureRandomInt(maxExclusive){
+  // kryptograficznie lepsze niż Math.random()
+  // (w większości przeglądarek dostępne)
+  if (maxExclusive <= 0) return 0;
+  const u32 = new Uint32Array(1);
+  const limit = Math.floor(0xFFFFFFFF / maxExclusive) * maxExclusive;
+  let x;
+  do {
+    crypto.getRandomValues(u32);
+    x = u32[0];
+  } while (x >= limit);
+  return x % maxExclusive;
+}
+
+function eligibleNames(){
+  const names = state.names.slice();
+  if (!state.onlyNew) return names;
+  const drawnSet = new Set(state.drawn.map(s => s.toLowerCase()));
+  return names.filter(n => !drawnSet.has(n.toLowerCase()));
+}
+
+function pickWinner(){
+  const pool = eligibleNames();
+  if (pool.length === 0) return null;
+  const idx = secureRandomInt(pool.length);
+  return pool[idx];
+}
+
+function angleToLandOnIndex(index, total){
+  // wskaźnik jest na górze: 270° (1.5π) w układzie canvas
+  const pointer = Math.PI * 1.5;
+  const slice = (Math.PI*2) / total;
+
+  // chcemy, by środek segmentu index był pod wskaźnikiem
+  const targetCenter = pointer - (index + 0.5) * slice;
+
+  // normalizuj do [0, 2π)
+  const norm = (a) => ((a % (Math.PI*2)) + (Math.PI*2)) % (Math.PI*2);
+  return norm(targetCenter);
+}
+
+function spin(){
+  if (spinning) return;
+
+  // sanity: usuń puste/duplikaty
+  saveState();
+  renderUI();
+
+  if (!state.names.length){
+    resultEl.firstChild.nodeValue = "Wynik: —";
+    resultMeta.textContent = "Dodaj przynajmniej jedno imię.";
+    return;
+  }
+
+  const winner = pickWinner();
+  if (!winner){
+    resultEl.firstChild.nodeValue = "Wynik: —";
+    resultMeta.textContent = "Brak nowych osób do losowania (włączone „tylko nowe”). Wyczyść wylosowanych albo odznacz opcję.";
+    return;
+  }
+
+  // indeks zwycięzcy w pełnej liście state.names (to koło)
+  const total = state.names.length;
+  const idx = state.names.findIndex(n => n.toLowerCase() === winner.toLowerCase());
+  const finalAngleNorm = angleToLandOnIndex(Math.max(0, idx), total);
+
+  spinning = true;
+  spinBtn.disabled = true;
+  resultEl.firstChild.nodeValue = "Wynik: kręcę…";
+  resultMeta.textContent = "Losowanie jest już ustalone, animacja tylko dojeżdża.";
+
+  const startAngle = angle;
+  const spins = 6 + secureRandomInt(5); // 6..10 pełnych obrotów
+  const target = startAngle + spins * Math.PI * 2 + finalAngleNorm;
+
+  const duration = 2400;
+  const t0 = performance.now();
+
+  function frame(now){
+    const t = Math.min(1, (now - t0)/duration);
+    const k = easeOutCubic(t);
+    angle = startAngle + (target - startAngle) * k;
+    drawWheel();
+
+    if (t < 1){
+      requestAnimationFrame(frame);
+    } else {
+      // ustabilizuj
+      angle = ((angle % (Math.PI*2)) + (Math.PI*2)) % (Math.PI*2);
+
+      // zapisz wylosowanego (jeśli „tylko nowe” i tak, ale zapis zawsze)
+      if (!state.drawn.some(n => n.toLowerCase() === winner.toLowerCase())) {
+        state.drawn.push(winner);
+      }
+      saveState();
+      renderUI();
+
+      resultEl.firstChild.nodeValue = "Wynik: " + winner;
+      resultMeta.textContent = state.onlyNew
+        ? "Zapisano jako wylosowanego (tryb: tylko nowe)."
+        : "Zapisano jako wylosowanego (tryb: wszystkie).";
+
+      spinning = false;
+      spinBtn.disabled = false;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+/** ---------------- UI binding ---------------- */
+const namesInput = document.getElementById("namesInput");
+const saveBtn = document.getElementById("saveBtn");
+const resetAllBtn = document.getElementById("resetAllBtn");
+const onlyNewChk = document.getElementById("onlyNewChk");
+const clearDrawnBtn = document.getElementById("clearDrawnBtn");
+const poolPills = document.getElementById("poolPills");
+const drawnPills = document.getElementById("drawnPills");
+
+function renderPills(el, arr){
+  el.innerHTML = "";
+  if (!arr.length){
+    const span = document.createElement("span");
+    span.className = "pill";
+    span.style.opacity = "0.7";
+    span.textContent = "—";
+    el.appendChild(span);
+    return;
+  }
+  for (const n of arr){
+    const span = document.createElement("span");
+    span.className = "pill";
+    span.textContent = n;
+    el.appendChild(span);
+  }
+}
+
+function renderUI(){
+  namesInput.value = state.names.join("\n");
+  onlyNewChk.checked = state.onlyNew;
+
+  const pool = eligibleNames();
+  renderPills(poolPills, pool);
+  renderPills(drawnPills, state.drawn);
+
+  drawWheel();
+}
+
+saveBtn.addEventListener("click", () => {
+  state.names = parseNamesFromTextarea(namesInput.value);
+  saveState();
+  renderUI();
+  resultEl.firstChild.nodeValue = "Wynik: —";
+  resultMeta.textContent = "Zapisano imiona w ciasteczku.";
+});
+
+namesInput.addEventListener("input", () => {
+  // autosave po krótkiej chwili
+  window.clearTimeout(window.__autosaveTimer);
+  window.__autosaveTimer = window.setTimeout(() => {
+    state.names = parseNamesFromTextarea(namesInput.value);
+    saveState();
+    renderUI();
+  }, 450);
+});
+
+onlyNewChk.addEventListener("change", () => {
+  state.onlyNew = !!onlyNewChk.checked;
+  saveState();
+  renderUI();
+});
+
+clearDrawnBtn.addEventListener("click", () => {
+  state.drawn = [];
+  saveState();
+  renderUI();
+  resultEl.firstChild.nodeValue = "Wynik: —";
+  resultMeta.textContent = "Wyczyszczono listę wylosowanych.";
+});
+
+resetAllBtn.addEventListener("click", () => {
+  deleteCookie(COOKIE_KEY);
+  state = { names: [], drawn: [], onlyNew: false };
+  renderUI();
+  resultEl.firstChild.nodeValue = "Wynik: —";
+  resultMeta.textContent = "Zresetowano wszystko (wyczyszczono ciasteczko).";
+});
+
+spinBtn.addEventListener("click", spin);
+
+// init
+loadState();
+saveState();
+renderUI();
+resizeCanvasForHiDPI();
+window.addEventListener("resize", () => {
+  resizeCanvasForHiDPI();
+  drawWheel();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Settings — Maszyna losująca</title>
+  <style>
+    :root{
+      --bg:#0b1020; --text:#e8ecff; --muted:#a9b3e6;
+      --border:rgba(255,255,255,.12); --accent:#7dd3fc;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:18px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 700px at 20% 0%, #1b2a66 0%, var(--bg) 60%);
+      overflow-x:hidden;
+    }
+
+    /* bąbelki tła */
+    .bubbles{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; opacity:.55; }
+    .bubble{
+      position:absolute; bottom:-120px;
+      width: var(--s); height: var(--s); left: var(--x);
+      border-radius:999px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.85), rgba(255,255,255,.08) 55%, rgba(255,255,255,.02) 75%);
+      border: 1px solid rgba(255,255,255,.12);
+      animation: rise var(--t) linear infinite;
+      animation-delay: var(--d);
+      transform: translateY(0) scale(var(--k));
+    }
+    @keyframes rise{
+      0% { transform: translateY(0) translateX(0) scale(var(--k)); opacity: 0; }
+      10%{ opacity: .9; }
+      100%{ transform: translateY(calc(-110vh)) translateX(var(--dx)) scale(var(--k)); opacity: 0; }
+    }
+
+    .wrap{
+      position:relative; z-index:1;
+      max-width: 980px; margin: 0 auto;
+      display:grid; gap:14px;
+    }
+    h1{
+      margin: 6px 0 0 0;
+      font-size: clamp(26px, 4.5vw, 40px);
+    }
+    .topRow{
+      display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    a.btnLink{
+      display:inline-block; text-decoration:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      font-weight: 800;
+    }
+    a.btnLink:hover{ background: rgba(255,255,255,.12); }
+
+    .card{
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      backdrop-filter: blur(8px);
+      display:grid;
+      gap:12px;
+    }
+
+    textarea{
+      width:100%;
+      min-height:180px;
+      resize:vertical;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline:none;
+      line-height:1.35;
+    }
+    textarea::placeholder{ color: rgba(232,236,255,.55); }
+
+    .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    button{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 900;
+    }
+    button:hover{ background: rgba(255,255,255,.12); }
+    button.danger{
+      background: rgba(248, 113, 113, .14);
+      border-color: rgba(248, 113, 113, .4);
+    }
+
+    label.chk{
+      display:flex; gap:8px; align-items:center;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background: rgba(255,255,255,.06);
+      font-weight:900;
+    }
+    input[type="checkbox"]{ transform: scale(1.15); }
+
+    .hint{ color:var(--muted); font-size: 13px; }
+    .lists{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 540px){ .lists{grid-template-columns:1fr;} }
+    .listBox{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px 12px;
+      background: rgba(0,0,0,.18);
+      min-height: 80px;
+    }
+    .listBox h3{
+      margin:0 0 8px 0;
+      font-size: 13px;
+      letter-spacing:.3px;
+      color: var(--muted);
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .pills{ display:flex; flex-wrap:wrap; gap:6px; }
+    .pill{
+      padding:6px 8px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      font-size: 13px;
+      font-weight: 900;
+    }
+    code{ color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="bubbles" aria-hidden="true" id="bubbles"></div>
+
+  <div class="wrap">
+    <div class="topRow">
+      <h1>⚙️ Settings</h1>
+      <a class="btnLink" href="./index.html">⬅️ Wróć do maszyny</a>
+    </div>
+
+    <div class="card">
+      <div>
+        <b>Imiona (po jednym w linii)</b>
+        <textarea id="namesInput" placeholder="Np.
+Ala
+Bartek
+Celina
+Dawid"></textarea>
+        <div class="hint">Zapis automatyczny w cookie (klucz: <code>wheel_state_v1</code>). Uwaga: cookie ma limit rozmiaru (~4KB).</div>
+      </div>
+
+      <div class="row">
+        <label class="chk" title="Jeśli włączone, losujemy tylko osoby, które nie były jeszcze wylosowane.">
+          <input type="checkbox" id="onlyNewChk" />
+          Losuj tylko nowe osoby
+        </label>
+
+        <button id="saveBtn">Zapisz teraz</button>
+        <button class="danger" id="clearDrawnBtn">Wyczyść wylosowanych</button>
+        <button class="danger" id="resetAllBtn">Reset wszystko</button>
+      </div>
+
+      <div class="lists">
+        <div class="listBox">
+          <h3>W puli (po uwzględnieniu opcji)</h3>
+          <div class="pills" id="poolPills"></div>
+        </div>
+        <div class="listBox">
+          <h3>Wylosowani</h3>
+          <div class="pills" id="drawnPills"></div>
+        </div>
+      </div>
+
+      <div class="hint">
+        „Uczciwość” jest po stronie <code>index.html</code>: losowanie jest wybierane przez <code>crypto.getRandomValues</code>, a animacja tylko pokazuje wynik.
+      </div>
+    </div>
+  </div>
+
+<script>
+/* bąbelki */
+(function makeBubbles(){
+  const root = document.getElementById("bubbles");
+  const count = Math.max(18, Math.min(36, Math.floor((window.innerWidth||800)/30)));
+  const rnd = (a,b)=>a+Math.random()*(b-a);
+
+  for(let i=0;i<count;i++){
+    const b = document.createElement("div");
+    b.className = "bubble";
+    const size = rnd(10, 42);
+    b.style.setProperty("--s", size + "px");
+    b.style.setProperty("--x", rnd(0, 100) + "vw");
+    b.style.setProperty("--t", rnd(6, 18) + "s");
+    b.style.setProperty("--d", (-rnd(0, 18)) + "s");
+    b.style.setProperty("--dx", rnd(-40, 40) + "px");
+    b.style.setProperty("--k", rnd(.75, 1.15).toFixed(2));
+    root.appendChild(b);
+  }
+})();
+
+/* cookies */
+const COOKIE_KEY = "wheel_state_v1";
+function setCookie(name, value, days=365) {
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = name + "=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; SameSite=Lax";
+}
+function getCookie(name) {
+  const parts = document.cookie.split("; ").map(s => s.split("="));
+  for (const [k, v] of parts) if (k === name) return decodeURIComponent(v || "");
+  return null;
+}
+function deleteCookie(name) {
+  document.cookie = name + "=; Max-Age=0; Path=/; SameSite=Lax";
+}
+
+/* state */
+let state = { names: [], drawn: [], onlyNew: false };
+
+function uniq(arr){
+  const out = [];
+  const seen = new Set();
+  for (const x of arr){
+    const k = x.toLowerCase();
+    if (!seen.has(k)){
+      seen.add(k);
+      out.push(x);
+    }
+  }
+  return out;
+}
+function parseNames(text){
+  return text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+}
+function loadState() {
+  const raw = getCookie(COOKIE_KEY);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.names) && Array.isArray(parsed.drawn)) {
+      state.names = parsed.names.map(s => String(s).trim()).filter(Boolean);
+      state.drawn = parsed.drawn.map(s => String(s).trim()).filter(Boolean);
+      state.onlyNew = !!parsed.onlyNew;
+    }
+  } catch {}
+}
+function saveState() {
+  state.names = uniq(state.names.map(s => s.trim()).filter(Boolean));
+  state.drawn = uniq(state.drawn.map(s => s.trim()).filter(Boolean));
+
+  const setNames = new Set(state.names.map(s => s.toLowerCase()));
+  state.drawn = state.drawn.filter(n => setNames.has(n.toLowerCase()));
+
+  setCookie(COOKIE_KEY, JSON.stringify(state));
+}
+function eligibleNames(){
+  const names = state.names.slice();
+  if (!state.onlyNew) return names;
+  const drawnSet = new Set(state.drawn.map(s => s.toLowerCase()));
+  return names.filter(n => !drawnSet.has(n.toLowerCase()));
+}
+
+/* UI */
+const namesInput = document.getElementById("namesInput");
+const onlyNewChk = document.getElementById("onlyNewChk");
+const saveBtn = document.getElementById("saveBtn");
+const clearDrawnBtn = document.getElementById("clearDrawnBtn");
+const resetAllBtn = document.getElementById("resetAllBtn");
+const poolPills = document.getElementById("poolPills");
+const drawnPills = document.getElementById("drawnPills");
+
+function renderPills(el, arr){
+  el.innerHTML = "";
+  if (!arr.length){
+    const s = document.createElement("span");
+    s.className = "pill";
+    s.style.opacity = "0.7";
+    s.textContent = "—";
+    el.appendChild(s);
+    return;
+  }
+  for (const n of arr){
+    const s = document.createElement("span");
+    s.className = "pill";
+    s.textContent = n;
+    el.appendChild(s);
+  }
+}
+
+function render(){
+  namesInput.value = state.names.join("\n");
+  onlyNewChk.checked = state.onlyNew;
+  renderPills(poolPills, eligibleNames());
+  renderPills(drawnPills, state.drawn);
+}
+
+function commitFromUI(){
+  state.names = parseNames(namesInput.value);
+  state.onlyNew = !!onlyNewChk.checked;
+  saveState();
+  render();
+}
+
+namesInput.addEventListener("input", () => {
+  clearTimeout(window.__t);
+  window.__t = setTimeout(commitFromUI, 350);
+});
+onlyNewChk.addEventListener("change", commitFromUI);
+
+saveBtn.addEventListener("click", commitFromUI);
+
+clearDrawnBtn.addEventListener("click", () => {
+  state.drawn = [];
+  saveState();
+  render();
+});
+
+resetAllBtn.addEventListener("click", () => {
+  deleteCookie(COOKIE_KEY);
+  state = { names: [], drawn: [], onlyNew: false };
+  render();
+});
+
+loadState();
+saveState();
+render();
+</script>
+</body>
+</html>
