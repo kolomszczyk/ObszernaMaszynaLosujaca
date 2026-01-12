@@ -314,14 +314,29 @@ function commitFromUI(){
   render();
 }
 
+/* ZMIANA: brak autosave na input */
 namesInput.addEventListener("input", () => {
-  clearTimeout(window.__t);
-  window.__t = setTimeout(commitFromUI, 350);
+  // nic nie zapisujemy w trakcie pisania
 });
+
+/* Zapis dopiero gdy wyjdziesz z pola */
+namesInput.addEventListener("blur", commitFromUI);
+
+/* Checkbox może zapisywać od razu */
 onlyNewChk.addEventListener("change", commitFromUI);
 
+/* Przycisk zapisuje od razu */
 saveBtn.addEventListener("click", commitFromUI);
 
+/* Ctrl+S zapisuje */
+window.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    commitFromUI();
+  }
+});
+
+/* Reszta bez zmian */
 clearDrawnBtn.addEventListener("click", () => {
   state.drawn = [];
   saveState();
@@ -337,6 +352,7 @@ resetAllBtn.addEventListener("click", () => {
 loadState();
 saveState();
 render();
+
 </script>
 </body>
 </html>
