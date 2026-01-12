@@ -21,14 +21,22 @@ function deleteCookie(name) {
   document.cookie = name + "=; Max-Age=0; Path=/; SameSite=Lax";
 }
 
+// ===== DEFAULT NAMES (PODSTAWOWE OSOBY) =====
+const DEFAULT_NAMES = [
+  "Obszerny Obszar",
+  "Inteligentny Fidek",
+  "Sucha Suchecka",
+  // dopisz resztę:
+  // "Kacper",
+  // "Bartek",
+];
+
 // ===== STATE =====
 let state = {
   names: [],
   drawn: [],
   onlyNew: false
 };
-
-
 
 function uniq(arr) {
   const out = [];
@@ -50,9 +58,21 @@ function parseNames(text) {
     .filter(Boolean);
 }
 
-
 function loadState() {
-  const parsed = storeGet ? storeGet() : getCookie(COOKIE_KEY);
+  // WAŻNE: nie może być "storeGet ? storeGet() : ..." bo storeGet może nie istnieć -> ReferenceError
+  const raw = (typeof storeGet !== "undefined" && typeof storeGet === "function")
+    ? storeGet()
+    : getCookie(COOKIE_KEY);
+
+  let parsed = null;
+
+  if (raw) {
+    if (typeof raw === "string") {
+      try { parsed = JSON.parse(raw); } catch { parsed = null; }
+    } else if (typeof raw === "object") {
+      parsed = raw;
+    }
+  }
 
   if (parsed && Array.isArray(parsed.names)) {
     state.names = parsed.names.map(s => String(s).trim()).filter(Boolean);
@@ -66,14 +86,13 @@ function loadState() {
   }
 }
 
-
 function saveState() {
   state.names = uniq(state.names.map(s => s.trim()).filter(Boolean));
   state.drawn = uniq(state.drawn.map(s => s.trim()).filter(Boolean));
 
   // usuń "wylosowanych", których nie ma już na liście imion
   const setNames = new Set(state.names.map(s => s.toLowerCase()));
-  state.drawn = state.drawn.filter(n => setNames.has(n.toLowerCase()));
+  state.drawn = state.drawn.filter(n => setNames.has(String(n).toLowerCase()));
 
   setCookie(COOKIE_KEY, JSON.stringify(state));
 }
@@ -93,6 +112,7 @@ const resetAllBtn = document.getElementById("resetAllBtn");
 
 const poolPills = document.getElementById("poolPills");
 const drawnPills = document.getElementById("drawnPills");
+const suggestPills = document.getElementById("suggestPills");
 
 // ===== RENDER =====
 function renderPills(el, arr) {
@@ -113,17 +133,58 @@ function renderPills(el, arr) {
   }
 }
 
+function renderSuggest() {
+  if (!suggestPills) return;
+
+  const have = new Set(state.names.map(s => String(s).toLowerCase()));
+  const suggestions = DEFAULT_NAMES.filter(n => !have.has(String(n).toLowerCase()));
+
+  suggestPills.innerHTML = "";
+
+  if (!suggestions.length) {
+    const s = document.createElement("span");
+    s.className = "pill";
+    s.style.opacity = "0.7";
+    s.textContent = "—";
+    suggestPills.appendChild(s);
+    return;
+  }
+
+  for (const n of suggestions) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pill";
+    btn.style.cursor = "pointer";
+    btn.textContent = n;
+
+    btn.addEventListener("click", () => {
+      state.names.push(String(n));
+      saveState();
+      render();
+    });
+
+    suggestPills.appendChild(btn);
+  }
+}
+
 function render() {
   namesInput.value = state.names.join("\n");
   onlyNewChk.checked = state.onlyNew;
+
   renderPills(poolPills, eligibleNames());
   renderPills(drawnPills, state.drawn);
+
+  renderSuggest();
 }
 
 // ===== COMMIT FROM UI =====
 function commitFromUI() {
   state.names = parseNames(namesInput.value);
   state.onlyNew = !!onlyNewChk.checked;
+
+  // jeśli user usunie wszystko, przywróć domyślne
+  if (!state.names.length) state.names = [...DEFAULT_NAMES];
+
   saveState();
   render();
 }
@@ -158,14 +219,25 @@ clearDrawnBtn.addEventListener("click", () => {
   render();
 });
 
-// Reset wszystko (czyści cookie)
+// Reset wszystko (czyści cookie i przywraca domyślne)
 resetAllBtn.addEventListener("click", () => {
   deleteCookie(COOKIE_KEY);
-  state = { names: [], drawn: [], onlyNew: false };
+  state = { names: [...DEFAULT_NAMES], drawn: [], onlyNew: false };
+  saveState();
   render();
 });
+
+
+function applyDefaultPlaceholder() {
+  if (!namesInput) return;
+  namesInput.placeholder = DEFAULT_NAMES.join("\n");
+}
+
+
 
 // ===== INIT =====
 loadState();
 saveState();
 render();
+
+applyDefaultPlaceholder();

@@ -21,6 +21,7 @@ function deleteCookie(name) {
   document.cookie = name + "=; Max-Age=0; Path=/; SameSite=Lax";
 }
 
+
 // ===== STATE =====
 let state = {
   names: [],
@@ -32,10 +33,10 @@ function uniq(arr) {
   const out = [];
   const seen = new Set();
   for (const x of arr) {
-    const k = x.toLowerCase();
+    const k = String(x).toLowerCase();
     if (!seen.has(k)) {
       seen.add(k);
-      out.push(x);
+      out.push(String(x));
     }
   }
   return out;
@@ -48,7 +49,7 @@ function loadState() {
     const parsed = JSON.parse(raw);
     if (parsed && Array.isArray(parsed.names)) {
       state.names = parsed.names.map(s => String(s).trim()).filter(Boolean);
-      state.drawn = parsed.drawn || [];
+      state.drawn = (parsed.drawn || []).map(s => String(s).trim()).filter(Boolean);
       state.onlyNew = !!parsed.onlyNew;
     }
   } catch {}
@@ -59,7 +60,7 @@ function saveState() {
   state.drawn = uniq(state.drawn.map(s => s.trim()).filter(Boolean));
 
   const setNames = new Set(state.names.map(s => s.toLowerCase()));
-  state.drawn = state.drawn.filter(n => setNames.has(n.toLowerCase()));
+  state.drawn = state.drawn.filter(n => setNames.has(String(n).toLowerCase()));
 
   setCookie(COOKIE_KEY, JSON.stringify(state));
 }
@@ -96,8 +97,6 @@ const ctx = canvas.getContext("2d");
 const resultEl = document.getElementById("result");
 const resultMeta = document.getElementById("resultMeta");
 const spinBtn = document.getElementById("spinBtn");
-const onlyNewChk = document.getElementById("onlyNewChk");
-const clearDrawnBtn = document.getElementById("clearDrawnBtn");
 
 let angle = 0;
 let spinning = false;
@@ -215,14 +214,14 @@ function spin() {
   drawWheel();
 
   if (!state.names.length) {
-    resultEl.firstChild.nodeValue = "Wynik: —";
+    resultEl.firstChild.nodeValue = "—";
     resultMeta.textContent = "Brak imion.";
     return;
   }
 
   const winner = pickWinner();
   if (!winner) {
-    resultEl.firstChild.nodeValue = "Wynik: —";
+    resultEl.firstChild.nodeValue = "—";
     resultMeta.textContent = "Brak nowych osób do losowania.";
     return;
   }
@@ -234,8 +233,6 @@ function spin() {
   spinning = true;
   spinBtn.disabled = true;
 
-  resultEl.firstChild.nodeValue = "Wynik: kręcę…";
-  resultMeta.textContent = "Wynik już wylosowany.";
 
   const startAngle = angle;
   const spins = 6 + secureRandomInt(5);
@@ -261,8 +258,7 @@ function spin() {
 
       saveState();
 
-      resultEl.firstChild.nodeValue = "Wynik: " + winner;
-      resultMeta.textContent = "Zapisano wylosowanego.";
+      resultEl.firstChild.nodeValue = winner;
 
       spinning = false;
       spinBtn.disabled = false;
@@ -275,23 +271,15 @@ function spin() {
 // ===== EVENTS =====
 spinBtn.addEventListener("click", spin);
 
-onlyNewChk.addEventListener("change", () => {
-  state.onlyNew = !!onlyNewChk.checked;
-  saveState();
-});
-
-clearDrawnBtn.addEventListener("click", () => {
-  state.drawn = [];
-  saveState();
-  resultEl.firstChild.nodeValue = "Wynik: —";
-  resultMeta.textContent = "Wyczyszczono wylosowanych.";
-});
 
 // ===== INIT =====
 function init() {
   loadState();
+
+  // jeśli ktoś odpali od razu index.html bez settings — przywróć domyślne
+  if (!state.names.length) state.names = [...DEFAULT_NAMES];
+
   saveState();
-  onlyNewChk.checked = state.onlyNew;
   resizeCanvasForHiDPI();
   drawWheel();
 }

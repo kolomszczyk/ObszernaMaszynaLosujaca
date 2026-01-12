@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8">
-  <title>Settings – Maszyna losująca</title>
+  <title>Ustawienia Obszernej Maszyny losującej</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="./beer.css">
   <link rel="stylesheet" href="./style.css">
@@ -26,10 +26,14 @@
 
       <section class="card">
 
-        <div>
+        <div style="width:100%;">
           <b>Imiona (po jednym w linii)</b>
-          <textarea id="namesInput" placeholder="Ala&#10;Bartek&#10;Celina"></textarea>
+          <textarea id="namesInput"></textarea>
           <div class="hint">Zapis po kliknięciu „Zapisz teraz” lub po wyjściu z pola</div>
+
+          <!-- PODPOWIEDZI -->
+          <div class="hint" style="margin-top:10px;">Podpowiedzi – kliknij, żeby dodać:</div>
+          <div class="pills" id="suggestPills"></div>
         </div>
 
         <div class="row">

@@ -184,3 +184,29 @@ a.btnLink{
     --sideMargin: 40px;
   }
 }
+
+.bigSpin{
+  font-size: clamp(28px, 6vw, 48px);
+  padding: 22px 40px;
+  border-radius: 20px;
+  font-weight: 900;
+  background: linear-gradient(180deg, #ffd54f, #ffb300);
+  border: 2px solid rgba(0,0,0,.25);
+  color: #3b2a00;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #cc8f00, 0 12px 24px rgba(0,0,0,.35);
+  transition: transform .08s, box-shadow .08s;
+}
+
+.bigSpin:active{
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 #cc8f00, 0 6px 12px rgba(0,0,0,.35);
+}
+
+#resultMeta{
+  visibility: hidden;
+}
+
+.result{
+  min-height: 46px;
+}
