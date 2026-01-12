@@ -1,373 +1,59 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
   <title>Maszyna losująca 🎰</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./beer.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <!-- bąbelki -->
-  <div class="bubbles" aria-hidden="true" id="bubbles"></div>
 
-  <div class="wrap">
-    <div class="topRow">
-      <div class="hint">Ustaw imiona w <b>Settings</b> (zapis w cookie).</div>
-      <a class="btnLink" href="./settings.html">⚙️ Settings</a>
-    </div>
-
-    <h1>Maszyna losująca 🎰</h1>
-
-    <section class="card">
-      <canvas id="wheel" width="560" height="560" aria-label="Koło losowania"></canvas>
-
-      <div class="result" id="result">
-        Wynik: —
-        <small id="resultMeta">Kliknij „Zakręć”. Jeśli brak imion — dodaj je w Settings.</small>
-      </div>
-
-      <div class="row">
-        <button class="primary" id="spinBtn">Zakręć</button>
-
-        <label class="chk" title="Losuj tylko osoby, które nie były jeszcze wylosowane.">
-          <input type="checkbox" id="onlyNewChk" />
-          Losuj tylko nowe
-        </label>
-
-        <button class="danger" id="clearDrawnBtn" title="Wyczyść listę wylosowanych (nie usuwa imion).">
-          Wyczyść wylosowane
-        </button>
-      </div>
-
-      <div class="footerNote">
-        Uczciwość: wybór zwycięzcy jest losowany <b>przed</b> animacją przez <code>crypto.getRandomValues</code>, a animacja tylko dojeżdża do wyniku.
-      </div>
-    </section>
+  <!-- PIWNE TŁO -->
+  <div class="beer-bg">
+    <div class="foam"></div>
+    <div class="bubbles"></div>
   </div>
 
-<script>
-/* ---------- bąbelki generator ---------- */
-(function makeBubbles(){
-  const root = document.getElementById("bubbles");
-  const count = Math.max(18, Math.min(36, Math.floor((window.innerWidth||800)/30)));
-  const rnd = (a,b)=>a+Math.random()*(b-a);
+  <!-- TREŚĆ -->
+  <main class="content">
+    <div class="wrap">
 
-  for(let i=0;i<count;i++){
-    const b = document.createElement("div");
-    b.className = "bubble";
-    const size = rnd(10, 42);
-    b.style.setProperty("--s", size + "px");
-    b.style.setProperty("--x", rnd(0, 100) + "vw");
-    b.style.setProperty("--t", rnd(6, 18) + "s");
-    b.style.setProperty("--d", (-rnd(0, 18)) + "s");
-    b.style.setProperty("--dx", rnd(-40, 40) + "px");
-    b.style.setProperty("--k", rnd(.75, 1.15).toFixed(2));
-    root.appendChild(b);
-  }
-})();
 
-/** ---------------- Cookies (JSON) ---------------- */
-const COOKIE_KEY = "wheel_state_v1";
-function setCookie(name, value, days=365) {
-  const maxAge = days * 24 * 60 * 60;
-  document.cookie = name + "=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; SameSite=Lax";
-}
-function getCookie(name) {
-  const parts = document.cookie.split("; ").map(s => s.split("="));
-  for (const [k, v] of parts) if (k === name) return decodeURIComponent(v || "");
-  return null;
-}
-function deleteCookie(name) {
-  document.cookie = name + "=; Max-Age=0; Path=/; SameSite=Lax";
-}
+      <h1>Maszyna losująca 🎰</h1>
 
-/** ---------------- State ---------------- */
-let state = { names: [], drawn: [], onlyNew: false };
+      <section class="card">
+        <canvas id="wheel" width="560" height="560"></canvas>
 
-function uniq(arr){
-  const out = [];
-  const seen = new Set();
-  for (const x of arr){
-    const k = x.toLowerCase();
-    if (!seen.has(k)){
-      seen.add(k);
-      out.push(x);
-    }
-  }
-  return out;
-}
+        <div class="result" id="result">
+          Wynik: —
+          <small id="resultMeta">Kliknij „Zakręć”.</small>
+        </div>
 
-function loadState() {
-  const raw = getCookie(COOKIE_KEY);
-  if (!raw) return;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.names) && Array.isArray(parsed.drawn)) {
-      state.names = parsed.names.map(s => String(s).trim()).filter(Boolean);
-      state.drawn = parsed.drawn.map(s => String(s).trim()).filter(Boolean);
-      state.onlyNew = !!parsed.onlyNew;
-    }
-  } catch {}
-}
+        <div class="row">
+          <button class="primary" id="spinBtn">Zakręć</button>
 
-function saveState() {
-  state.names = uniq(state.names.map(s => s.trim()).filter(Boolean));
-  state.drawn = uniq(state.drawn.map(s => s.trim()).filter(Boolean));
+          <label class="chk">
+            <input type="checkbox" id="onlyNewChk">
+            Tylko nowe osoby
+          </label>
 
-  const setNames = new Set(state.names.map(s => s.toLowerCase()));
-  state.drawn = state.drawn.filter(n => setNames.has(n.toLowerCase()));
+          <button class="danger" id="clearDrawnBtn">Wyczyść wylosowanych</button>
+        </div>
 
-  setCookie(COOKIE_KEY, JSON.stringify(state));
-}
+      </section>
 
-function eligibleNames(){
-  const names = state.names.slice();
-  if (!state.onlyNew) return names;
-  const drawnSet = new Set(state.drawn.map(s => s.toLowerCase()));
-  return names.filter(n => !drawnSet.has(n.toLowerCase()));
-}
+    </div>
+    
 
-/** ---------------- Wheel rendering ---------------- */
-const canvas = document.getElementById("wheel");
-const ctx = canvas.getContext("2d");
 
-const resultEl = document.getElementById("result");
-const resultMeta = document.getElementById("resultMeta");
-const spinBtn = document.getElementById("spinBtn");
-const onlyNewChk = document.getElementById("onlyNewChk");
-const clearDrawnBtn = document.getElementById("clearDrawnBtn");
 
-let angle = 0;
-let spinning = false;
+    <a class="btnLink settingsRight" href="./settings.html">
+      ⚙️ Settings
+    </a>
+  </main>
 
-function resizeCanvasForHiDPI(){
-  const cssW = canvas.clientWidth || 560;
-  const cssH = canvas.clientHeight || 560;
-  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-  canvas.width = Math.round(cssW * dpr);
-  canvas.height = Math.round(cssH * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function drawBottle(x,y, size){
-  const s = size;
-  ctx.save();
-  ctx.translate(x, y);
-
-  ctx.beginPath();
-  ctx.ellipse(0, s*0.32, s*0.28, s*0.12, 0, 0, Math.PI*2);
-  ctx.fillStyle = "rgba(0,0,0,.25)";
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.roundRect(-s*0.22, -s*0.22, s*0.44, s*0.54, s*0.12);
-  ctx.fillStyle = "rgba(255,255,255,.86)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,.15)";
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.roundRect(-s*0.10, -s*0.44, s*0.20, s*0.26, s*0.08);
-  ctx.fillStyle = "rgba(255,255,255,.86)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,.15)";
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.roundRect(-s*0.12, -s*0.52, s*0.24, s*0.10, s*0.06);
-  ctx.fillStyle = "rgba(125,211,252,.65)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(125,211,252,.95)";
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.roundRect(-s*0.18, -s*0.02, s*0.36, s*0.20, s*0.08);
-  ctx.fillStyle = "rgba(125,211,252,.20)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(125,211,252,.55)";
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawWheel(){
-  const cssW = canvas.clientWidth || 560;
-  const cssH = canvas.clientHeight || 560;
-
-  ctx.clearRect(0, 0, cssW, cssH);
-
-  const cx = cssW/2;
-  const cy = cssH/2;
-  const radius = Math.min(cx,cy) - 18;
-
-  const names = state.names.length ? state.names : ["Brak imion"];
-  const slice = (Math.PI*2) / names.length;
-
-  // tło koła
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI*2);
-  ctx.fillStyle = "rgba(255,255,255,.04)";
-  ctx.fill();
-
-  for (let i=0;i<names.length;i++){
-    const start = angle + i*slice;
-    const end = start + slice;
-
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,radius,start,end);
-    ctx.closePath();
-
-    const hue = (i * 360 / names.length) % 360;
-    ctx.fillStyle = `hsla(${hue}, 80%, 60%, .55)`;
-    ctx.fill();
-
-    ctx.strokeStyle = "rgba(255,255,255,.10)";
-    ctx.stroke();
-
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(start + slice/2);
-    ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.font = `800 ${Math.max(12, Math.min(16, radius/22))}px system-ui`;
-    ctx.fillText(names[i], radius - 16, 6);
-    ctx.restore();
-  }
-
-  // środek
-  ctx.beginPath();
-  ctx.arc(cx, cy, Math.max(46, radius*0.17), 0, Math.PI*2);
-  ctx.fillStyle = "rgba(0,0,0,.22)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,.12)";
-  ctx.stroke();
-
-  drawBottle(cx, cy+2, Math.max(90, radius*0.32));
-
-  // wskaźnik
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - radius - 6);
-  ctx.lineTo(cx - 14, cy - radius + 20);
-  ctx.lineTo(cx + 14, cy - radius + 20);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(255,255,255,.92)";
-  ctx.fill();
-}
-
-function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
-
-function secureRandomInt(maxExclusive){
-  if (maxExclusive <= 0) return 0;
-  const u32 = new Uint32Array(1);
-  const limit = Math.floor(0xFFFFFFFF / maxExclusive) * maxExclusive;
-  let x;
-  do {
-    crypto.getRandomValues(u32);
-    x = u32[0];
-  } while (x >= limit);
-  return x % maxExclusive;
-}
-
-function pickWinner(){
-  const pool = eligibleNames();
-  if (pool.length === 0) return null;
-  return pool[secureRandomInt(pool.length)];
-}
-
-function angleToLandOnIndex(index, total){
-  const pointer = Math.PI * 1.5;
-  const slice = (Math.PI*2) / total;
-  const targetCenter = pointer - (index + 0.5) * slice;
-  const norm = (a) => ((a % (Math.PI*2)) + (Math.PI*2)) % (Math.PI*2);
-  return norm(targetCenter);
-}
-
-function spin(){
-  if (spinning) return;
-
-  saveState();
-  drawWheel();
-
-  if (!state.names.length){
-    resultEl.firstChild.nodeValue = "Wynik: —";
-    resultMeta.textContent = "Brak imion. Dodaj je w Settings.";
-    return;
-  }
-
-  const winner = pickWinner();
-  if (!winner){
-    resultEl.firstChild.nodeValue = "Wynik: —";
-    resultMeta.textContent = "Brak nowych osób do losowania. Wyczyść wylosowanych lub wyłącz „tylko nowe”.";
-    return;
-  }
-
-  const total = state.names.length;
-  const idx = state.names.findIndex(n => n.toLowerCase() === winner.toLowerCase());
-  const finalAngleNorm = angleToLandOnIndex(Math.max(0, idx), total);
-
-  spinning = true;
-  spinBtn.disabled = true;
-  resultEl.firstChild.nodeValue = "Wynik: kręcę…";
-  resultMeta.textContent = "Wynik już wylosowany — animacja dojeżdża.";
-
-  const startAngle = angle;
-  const spins = 6 + secureRandomInt(5);
-  const target = startAngle + spins * Math.PI * 2 + finalAngleNorm;
-
-  const duration = 2400;
-  const t0 = performance.now();
-
-  function frame(now){
-    const t = Math.min(1, (now - t0)/duration);
-    const k = easeOutCubic(t);
-    angle = startAngle + (target - startAngle) * k;
-    drawWheel();
-
-    if (t < 1){
-      requestAnimationFrame(frame);
-    } else {
-      angle = ((angle % (Math.PI*2)) + (Math.PI*2)) % (Math.PI*2);
-
-      if (!state.drawn.some(n => n.toLowerCase() === winner.toLowerCase())) {
-        state.drawn.push(winner);
-      }
-      saveState();
-
-      resultEl.firstChild.nodeValue = "Wynik: " + winner;
-      resultMeta.textContent = "Zapisano wylosowanego w cookie.";
-      spinning = false;
-      spinBtn.disabled = false;
-    }
-  }
-  requestAnimationFrame(frame);
-}
-
-/* ---------- UI events ---------- */
-spinBtn.addEventListener("click", spin);
-onlyNewChk.addEventListener("change", () => {
-  state.onlyNew = !!onlyNewChk.checked;
-  saveState();
-});
-clearDrawnBtn.addEventListener("click", () => {
-  state.drawn = [];
-  saveState();
-  resultEl.firstChild.nodeValue = "Wynik: —";
-  resultMeta.textContent = "Wyczyszczono wylosowanych.";
-});
-
-function init(){
-  loadState();
-  saveState();
-  onlyNewChk.checked = state.onlyNew;
-  resizeCanvasForHiDPI();
-  drawWheel();
-}
-init();
-window.addEventListener("resize", () => {
-  resizeCanvasForHiDPI();
-  drawWheel();
-});
-</script>
+  <script src="./bubbles.js"></script>
+  <script src="./wheel.js"></script>
 </body>
 </html>

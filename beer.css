@@ -1,0 +1,91 @@
+body{
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Tło piwa */
+.beer-bg {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(to bottom, #f9d36b 0%, #f2b705 60%, #e09f00 100%);
+}
+
+/* REALISTYCZNA PIANKA */
+.foam {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 150px;
+
+  background-image: url("img/foam.png"); /* <-- TU */
+  background-repeat: repeat;
+  background-size: 200px 200px;
+
+  background-color: #fff;
+
+  filter: blur(0.6px) contrast(1.1);
+  opacity: 0.95;
+
+  /* Zanik w dół */
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+
+  /* Lekki ruch */
+  animation: foamMove 8s linear infinite;
+}
+
+@keyframes foamMove {
+  from { background-position: 0 0; }
+  to   { background-position: 300px 80px; }
+}
+
+/* Żeby treść była nad tłem */
+.content{
+  position: relative;
+  z-index: 5;
+  padding: 48px;
+  color: rgba(0,0,0,.7);
+  font-family: system-ui, sans-serif;
+}
+
+/* warstwa bąbelków */
+.bubbles{
+  position: absolute;
+  inset: 0;
+  z-index: 2;            /* piwo */
+  pointer-events: none;
+}
+
+/* pojedynczy bąbelek */
+.bubble{
+  position: absolute;
+  bottom: -20px;
+  border-radius: 999px;
+  width: var(--size);
+  height: var(--size);
+  left: var(--left);
+
+  /* lekko „szkliste” jak w piwie */
+  background: radial-gradient(circle at 30% 30%,
+    rgba(255,255,255,.95),
+    rgba(255,255,255,.35) 45%,
+    rgba(255,255,255,.10) 70%,
+    rgba(255,255,255,0) 100%);
+
+  opacity: 0;
+  filter: blur(.15px);
+  transform: translateY(0);
+
+  animation: rise var(--dur) linear var(--delay) infinite;
+}
+
+/* ruch do góry + delikatne kołysanie */
+@keyframes rise{
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  8%   { opacity: .55; }
+  50%  { opacity: .35; }
+  100% { transform: translateY(calc(-1 * var(--travel))) translateX(var(--drift));
+         opacity: 0; }
+}

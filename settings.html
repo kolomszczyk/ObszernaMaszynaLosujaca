@@ -1,221 +1,65 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Settings — Maszyna losująca</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8">
+  <title>Settings – Maszyna losująca</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./beer.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="bubbles" aria-hidden="true" id="bubbles"></div>
 
-  <div class="wrap">
-    <div class="topRow">
-      <h1>⚙️ Settings</h1>
-      <a class="btnLink" href="./index.html">⬅️ Wróć do maszyny</a>
-    </div>
-
-    <div class="card">
-      <div>
-        <b>Imiona (po jednym w linii)</b>
-        <textarea id="namesInput" placeholder="Np.
-Ala
-Bartek
-Celina
-Dawid"></textarea>
-        <div class="hint">Zapis automatyczny w cookie (klucz: <code>wheel_state_v1</code>). Uwaga: cookie ma limit rozmiaru (~4KB).</div>
-      </div>
-
-      <div class="row">
-        <label class="chk" title="Jeśli włączone, losujemy tylko osoby, które nie były jeszcze wylosowane.">
-          <input type="checkbox" id="onlyNewChk" />
-          Losuj tylko nowe osoby
-        </label>
-
-        <button id="saveBtn">Zapisz teraz</button>
-        <button class="danger" id="clearDrawnBtn">Wyczyść wylosowanych</button>
-        <button class="danger" id="resetAllBtn">Reset wszystko</button>
-      </div>
-
-      <div class="lists">
-        <div class="listBox">
-          <h3>W puli (po uwzględnieniu opcji)</h3>
-          <div class="pills" id="poolPills"></div>
-        </div>
-        <div class="listBox">
-          <h3>Wylosowani</h3>
-          <div class="pills" id="drawnPills"></div>
-        </div>
-      </div>
-
-      <div class="hint">
-        „Uczciwość” jest po stronie <code>index.html</code>: losowanie jest wybierane przez <code>crypto.getRandomValues</code>, a animacja tylko pokazuje wynik.
-      </div>
-    </div>
+  <!-- PIWNE TŁO -->
+  <div class="beer-bg">
+    <div class="foam"></div>
+    <div class="bubbles"></div>
   </div>
 
-<script>
-/* bąbelki */
-(function makeBubbles(){
-  const root = document.getElementById("bubbles");
-  const count = Math.max(18, Math.min(36, Math.floor((window.innerWidth||800)/30)));
-  const rnd = (a,b)=>a+Math.random()*(b-a);
+  <!-- TREŚĆ -->
+  <main class="content">
+    <div class="wrap">
 
-  for(let i=0;i<count;i++){
-    const b = document.createElement("div");
-    b.className = "bubble";
-    const size = rnd(10, 42);
-    b.style.setProperty("--s", size + "px");
-    b.style.setProperty("--x", rnd(0, 100) + "vw");
-    b.style.setProperty("--t", rnd(6, 18) + "s");
-    b.style.setProperty("--d", (-rnd(0, 18)) + "s");
-    b.style.setProperty("--dx", rnd(-40, 40) + "px");
-    b.style.setProperty("--k", rnd(.75, 1.15).toFixed(2));
-    root.appendChild(b);
-  }
-})();
+      <div class="topRow">
+        <h1>⚙️ Settings</h1>
+        <a class="btnLink" href="./index.html">⬅️ Powrót</a>
+      </div>
 
-/* cookies */
-const COOKIE_KEY = "wheel_state_v1";
-function setCookie(name, value, days=365) {
-  const maxAge = days * 24 * 60 * 60;
-  document.cookie = name + "=" + encodeURIComponent(value) + "; Max-Age=" + maxAge + "; Path=/; SameSite=Lax";
-}
-function getCookie(name) {
-  const parts = document.cookie.split("; ").map(s => s.split("="));
-  for (const [k, v] of parts) if (k === name) return decodeURIComponent(v || "");
-  return null;
-}
-function deleteCookie(name) {
-  document.cookie = name + "=; Max-Age=0; Path=/; SameSite=Lax";
-}
+      <section class="card">
 
-/* state */
-let state = { names: [], drawn: [], onlyNew: false };
+        <div>
+          <b>Imiona (po jednym w linii)</b>
+          <textarea id="namesInput" placeholder="Ala&#10;Bartek&#10;Celina"></textarea>
+          <div class="hint">Zapis po kliknięciu „Zapisz teraz” lub po wyjściu z pola</div>
+        </div>
 
-function uniq(arr){
-  const out = [];
-  const seen = new Set();
-  for (const x of arr){
-    const k = x.toLowerCase();
-    if (!seen.has(k)){
-      seen.add(k);
-      out.push(x);
-    }
-  }
-  return out;
-}
-function parseNames(text){
-  return text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-}
-function loadState() {
-  const raw = getCookie(COOKIE_KEY);
-  if (!raw) return;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.names) && Array.isArray(parsed.drawn)) {
-      state.names = parsed.names.map(s => String(s).trim()).filter(Boolean);
-      state.drawn = parsed.drawn.map(s => String(s).trim()).filter(Boolean);
-      state.onlyNew = !!parsed.onlyNew;
-    }
-  } catch {}
-}
-function saveState() {
-  state.names = uniq(state.names.map(s => s.trim()).filter(Boolean));
-  state.drawn = uniq(state.drawn.map(s => s.trim()).filter(Boolean));
+        <div class="row">
+          <label class="chk">
+            <input type="checkbox" id="onlyNewChk">
+            Losuj tylko nowe osoby
+          </label>
 
-  const setNames = new Set(state.names.map(s => s.toLowerCase()));
-  state.drawn = state.drawn.filter(n => setNames.has(n.toLowerCase()));
+          <button id="saveBtn">Zapisz teraz</button>
+          <button class="danger" id="clearDrawnBtn">Wyczyść wylosowanych</button>
+          <button class="danger" id="resetAllBtn">Reset wszystko</button>
+        </div>
 
-  setCookie(COOKIE_KEY, JSON.stringify(state));
-}
-function eligibleNames(){
-  const names = state.names.slice();
-  if (!state.onlyNew) return names;
-  const drawnSet = new Set(state.drawn.map(s => s.toLowerCase()));
-  return names.filter(n => !drawnSet.has(n.toLowerCase()));
-}
+        <div class="lists">
+          <div class="listBox">
+            <h3>W puli</h3>
+            <div class="pills" id="poolPills"></div>
+          </div>
 
-/* UI */
-const namesInput = document.getElementById("namesInput");
-const onlyNewChk = document.getElementById("onlyNewChk");
-const saveBtn = document.getElementById("saveBtn");
-const clearDrawnBtn = document.getElementById("clearDrawnBtn");
-const resetAllBtn = document.getElementById("resetAllBtn");
-const poolPills = document.getElementById("poolPills");
-const drawnPills = document.getElementById("drawnPills");
+          <div class="listBox">
+            <h3>Wylosowani</h3>
+            <div class="pills" id="drawnPills"></div>
+          </div>
+        </div>
 
-function renderPills(el, arr){
-  el.innerHTML = "";
-  if (!arr.length){
-    const s = document.createElement("span");
-    s.className = "pill";
-    s.style.opacity = "0.7";
-    s.textContent = "—";
-    el.appendChild(s);
-    return;
-  }
-  for (const n of arr){
-    const s = document.createElement("span");
-    s.className = "pill";
-    s.textContent = n;
-    el.appendChild(s);
-  }
-}
+      </section>
+    </div>
+  </main>
 
-function render(){
-  namesInput.value = state.names.join("\n");
-  onlyNewChk.checked = state.onlyNew;
-  renderPills(poolPills, eligibleNames());
-  renderPills(drawnPills, state.drawn);
-}
-
-function commitFromUI(){
-  state.names = parseNames(namesInput.value);
-  state.onlyNew = !!onlyNewChk.checked;
-  saveState();
-  render();
-}
-
-/* ZMIANA: brak autosave na input */
-namesInput.addEventListener("input", () => {
-  // nic nie zapisujemy w trakcie pisania
-});
-
-/* Zapis dopiero gdy wyjdziesz z pola */
-namesInput.addEventListener("blur", commitFromUI);
-
-/* Checkbox może zapisywać od razu */
-onlyNewChk.addEventListener("change", commitFromUI);
-
-/* Przycisk zapisuje od razu */
-saveBtn.addEventListener("click", commitFromUI);
-
-/* Ctrl+S zapisuje */
-window.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
-    e.preventDefault();
-    commitFromUI();
-  }
-});
-
-/* Reszta bez zmian */
-clearDrawnBtn.addEventListener("click", () => {
-  state.drawn = [];
-  saveState();
-  render();
-});
-
-resetAllBtn.addEventListener("click", () => {
-  deleteCookie(COOKIE_KEY);
-  state = { names: [], drawn: [], onlyNew: false };
-  render();
-});
-
-loadState();
-saveState();
-render();
-
-</script>
+  <script src="./bubbles.js"></script>
+  <script src="./settings.js"></script>
 </body>
 </html>
