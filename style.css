@@ -1,6 +1,6 @@
 /* Stały margines boczny – symetria lewo/prawo */
 :root{
-  --sideMargin: 90px;
+    --sideMargin: clamp(12px, 4vw, 90px);
 }
 
 
@@ -87,12 +87,16 @@ label.chk{
 }
 
 canvas{
-  width:min(92vw, 520px);
-  max-width:520px;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
   border-radius:18px;
   background: rgba(0,0,0,.18);
   border:1px solid var(--border);
 }
+
 
 .result{
   width:min(92vw, 520px);
@@ -172,18 +176,6 @@ a.btnLink{
   border-bottom-right-radius: 0;
 }
 
-/* Na małych ekranach zmniejszamy marginesy */
-@media (max-width: 700px){
-  :root{
-    --sideMargin: 60px;
-  }
-}
-
-@media (max-width: 480px){
-  :root{
-    --sideMargin: 40px;
-  }
-}
 
 .bigSpin{
   font-size: clamp(28px, 6vw, 48px);
@@ -209,4 +201,15 @@ a.btnLink{
 
 .result{
   min-height: 46px;
+}
+
+html, body{
+  overflow-x: hidden;
+}
+
+
+@media (max-height: 700px){
+  h1{ font-size: 32px; }
+  .bigSpin{ font-size: 26px; padding: 16px 28px; }
+  canvas{ max-width: 420px; }
 }
