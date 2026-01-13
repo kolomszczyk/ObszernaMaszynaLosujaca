@@ -11,6 +11,7 @@ body{
   padding:18px;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color:var(--text);
+  background:red;
 }
 
 .wrap{
@@ -231,4 +232,15 @@ html, body{
   .settingsRight{
     right: 16px;
   }
+}
+
+#bottle{
+  position: absolute;
+  width: 140px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transition: none;
+  pointer-events: none;
+  z-index: 6;
 }

@@ -1,3 +1,5 @@
+const bottle = document.getElementById("bottle");
+
 // ===== COOKIE UTILS =====
 const COOKIE_KEY = "wheel_state_v1";
 
@@ -20,7 +22,6 @@ function getCookie(name) {
 function deleteCookie(name) {
   document.cookie = name + "=; Max-Age=0; Path=/; SameSite=Lax";
 }
-
 
 // ===== STATE =====
 let state = {
@@ -84,36 +85,48 @@ function secureRandomInt(maxExclusive) {
   return x % maxExclusive;
 }
 
-function pickWinner() {
-  const pool = eligibleNames();
-  if (!pool.length) return null;
-  return pool[secureRandomInt(pool.length)];
-}
-
 // ===== CANVAS / WHEEL =====
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 
 const resultEl = document.getElementById("result");
-const resultMeta = document.getElementById("resultMeta");
 const spinBtn = document.getElementById("spinBtn");
 
-let angle = 0;
+// ===== ROTATION STATE =====
+let wheelAngle = 0;     // koło zawsze kręci się powoli
+let bottleAngle = 0;    // butelka: powoli na idle, szybciej przy spin
 let spinning = false;
+let lastT = performance.now();
 
-function normAngle(a) {
+// JEDNA prędkość idle dla obu => identyczne tempo
+const IDLE_SPEED = 0.9; // rad/s (zwiększ/zmniejsz jak chcesz)
+
+function norm(x) {
   const twopi = Math.PI * 2;
-  return ((a % twopi) + twopi) % twopi;
+  return ((x % twopi) + twopi) % twopi;
 }
 
-// Kąt (absolutny), przy którym segment o indeksie `index` jest pod wskaźnikiem u góry
-function angleForWinnerIndex(index, total) {
-  const pointer = Math.PI * 1.5;          // góra (270°)
+// winner z aktualnych kątów (koło się kręci => liczymy wzgl. wheelAngle)
+function winnerIndexFromAngles(bAng, wAng, total) {
+  const pointer = Math.PI * 1.5 + bAng; // góra + obrót butelki
   const slice = (Math.PI * 2) / total;
-  // Rysujesz segmenty od: start = angle + i*slice, więc żeby środek segmentu był pod wskaźnikiem:
-  return normAngle(pointer - (index + 0.5) * slice);
+  const rel = norm(pointer - wAng);
+  return Math.floor(rel / slice) % total;
 }
 
+// jaki kąt butelki ma wskazać segment index przy wheelAngleEnd
+function bottleAngleToPointIndexAtWheel(index, total, wheelAngleEnd) {
+  const slice = (Math.PI * 2) / total;
+
+  // jitter, żeby nie lądować zawsze w środku (zawsze w obrębie segmentu)
+  const maxJitter = slice * 0.45;
+  const SCALE = 1_000_000;
+  const r = secureRandomInt(2 * SCALE + 1) - SCALE; // [-SCALE, +SCALE]
+  const jitter = (r / SCALE) * maxJitter;
+
+  const targetPointer = wheelAngleEnd + (index + 0.5) * slice + jitter;
+  return norm(targetPointer - Math.PI * 1.5);
+}
 
 function resizeCanvasForHiDPI() {
   const cssW = canvas.clientWidth || 560;
@@ -122,40 +135,6 @@ function resizeCanvasForHiDPI() {
   canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function drawBottle(x, y, size) {
-  const s = size;
-  ctx.save();
-  ctx.translate(x, y);
-
-  ctx.beginPath();
-  ctx.ellipse(0, s * 0.32, s * 0.28, s * 0.12, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,.25)";
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.roundRect(-s * 0.22, -s * 0.22, s * 0.44, s * 0.54, s * 0.12);
-  ctx.fillStyle = "rgba(255,255,255,.86)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,.15)";
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.roundRect(-s * 0.10, -s * 0.44, s * 0.20, s * 0.26, s * 0.08);
-  ctx.fillStyle = "rgba(255,255,255,.86)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,.15)";
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.roundRect(-s * 0.12, -s * 0.52, s * 0.24, s * 0.10, s * 0.06);
-  ctx.fillStyle = "rgba(125,211,252,.65)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(125,211,252,.95)";
-  ctx.stroke();
-
-  ctx.restore();
 }
 
 function drawWheel() {
@@ -171,9 +150,8 @@ function drawWheel() {
   const names = state.names.length ? state.names : ["Brak imion"];
   const slice = (Math.PI * 2) / names.length;
 
-  // ===== SEGMENTY =====
   for (let i = 0; i < names.length; i++) {
-    const start = angle + i * slice;
+    const start = wheelAngle + i * slice;
     const end = start + slice;
 
     ctx.beginPath();
@@ -188,7 +166,6 @@ function drawWheel() {
     ctx.strokeStyle = "rgba(255,255,255,.12)";
     ctx.stroke();
 
-    // tekst
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(start + slice / 2);
@@ -198,132 +175,131 @@ function drawWheel() {
     ctx.fillText(names[i], radius - 16, 6);
     ctx.restore();
   }
-
-  // ===== ŚRODEK =====
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius * 0.25, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,.3)";
-  ctx.fill();
-
-  drawBottle(cx, cy, radius * 0.4);
-
-  // ===== STRZAŁKA (W DÓŁ, ZAWSZE WIDOCZNA) =====
-  const arrowW = 14;
-  const arrowH = 20;
-
-  // pozycja czubka strzałki (nie wyjdzie poza canvas)
-  const tipY = Math.max(12, cy - radius + 6);
-
-  ctx.beginPath();
-  ctx.moveTo(cx, tipY);                     // czubek (w dół)
-  ctx.lineTo(cx - arrowW, tipY - arrowH);  // lewy górny
-  ctx.lineTo(cx + arrowW, tipY - arrowH);  // prawy górny
-  ctx.closePath();
-  ctx.fillStyle = "#fff";
-  ctx.fill();
 }
 
+// ===== IDLE LOOP (koło zawsze, butelka zawsze gdy nie spin) =====
+function tick(now) {
+  // dt w sekundach, przycięte żeby po lagach nie skakało
+  const dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
 
-// ===== SPIN LOGIC =====
-function angleToLandOnIndex(index, total) {
-  const pointer = Math.PI * 1.5;
-  const slice = (Math.PI * 2) / total;
-  const targetCenter = pointer - (index + 0.5) * slice;
-  return ((targetCenter % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  // koło zawsze kręci się powoli
+  wheelAngle += IDLE_SPEED * dt;
+
+  // butelka na idle ma DOKŁADNIE tę samą prędkość
+  if (!spinning) {
+    bottleAngle += IDLE_SPEED * dt;
+  }
+
+  drawWheel();
+
+  if (bottle) {
+    bottle.style.transform =
+      `translate(-50%, -50%) rotate(${bottleAngle}rad)`;
+  }
+
+  requestAnimationFrame(tick);
 }
 
+// ===== SPIN (tylko butelka przyspiesza) =====
 function spin() {
   if (spinning) return;
 
   saveState();
-  drawWheel();
 
   if (!state.names.length) {
     resultEl.firstChild.nodeValue = "—";
-    resultMeta.textContent = "Brak imion.";
     return;
   }
-
-  const winner = pickWinner();
-  if (!winner) {
-    resultEl.firstChild.nodeValue = "—";
-    resultMeta.textContent = "Brak nowych osób do losowania.";
-    return;
-  }
-
-  const twopi = Math.PI * 2;
-  const norm = (a) => ((a % twopi) + twopi) % twopi;
 
   const total = state.names.length;
-  const idx = state.names.findIndex(n => n.toLowerCase() === winner.toLowerCase());
+  const eligible = eligibleNames();
+  if (!eligible.length) {
+    resultEl.firstChild.nodeValue = "—";
+    return;
+  }
 
-  // to jest ABSOLUTNY kąt, przy którym zwycięski segment jest pod wskaźnikiem
-  const wantedAngle = angleToLandOnIndex(Math.max(0, idx), total);
+  const eligibleSet = new Set(eligible.map(n => n.toLowerCase()));
+  const eligibleIdxs = [];
+  for (let i = 0; i < state.names.length; i++) {
+    if (eligibleSet.has(state.names[i].toLowerCase())) eligibleIdxs.push(i);
+  }
+  if (!eligibleIdxs.length) {
+    resultEl.firstChild.nodeValue = "—";
+    return;
+  }
+
+  // crypto-losowe: wybór segmentu z puli eligible
+  const chosenIdx = eligibleIdxs[secureRandomInt(eligibleIdxs.length)];
 
   spinning = true;
   spinBtn.disabled = true;
 
-  const startAngle = angle;       // może być > 2π
-  const startNorm = norm(startAngle);
-
-  // ile trzeba dodać (0..2π), żeby z aktualnego kąta dojechać do wantedAngle
-  const delta = norm(wantedAngle - startNorm);
-
-  const spins = 6 + secureRandomInt(5);
-  const target = startAngle + spins * twopi + delta;
-
+  const startBottle = bottleAngle;
   const duration = 2400;
   const t0 = performance.now();
+
+  // przewidujemy, gdzie będzie koło na końcu (bo stale się kręci IDLE_SPEED)
+  const wheelAngleEnd = wheelAngle + IDLE_SPEED * (duration / 1000);
+
+  // docelowy kąt butelki (z jitterem w segmencie)
+  const wantedBottle = bottleAngleToPointIndexAtWheel(chosenIdx, total, wheelAngleEnd);
+
+  const twopi = Math.PI * 2;
+  const delta = norm(wantedBottle - norm(startBottle));
+  const spins = 6 + secureRandomInt(5); // crypto
+  const targetBottle = startBottle + spins * twopi + delta;
 
   function frame(now) {
     const t = Math.min(1, (now - t0) / duration);
     const k = 1 - Math.pow(1 - t, 3);
 
-    angle = startAngle + (target - startAngle) * k;
-    drawWheel();
+    // tylko butelka przyspiesza
+    bottleAngle = startBottle + (targetBottle - startBottle) * k;
 
     if (t < 1) {
       requestAnimationFrame(frame);
-    } else {
-      // ustaw dokładnie na zwycięski kąt (bez mikrorozjazdów)
-      angle = wantedAngle;
-      drawWheel();
-
-      if (!state.drawn.some(n => n.toLowerCase() === winner.toLowerCase())) {
-        state.drawn.push(winner);
-      }
-
-      saveState();
-      resultEl.firstChild.nodeValue = winner;
-
-      spinning = false;
-      spinBtn.disabled = false;
+      return;
     }
+
+    // finish: ustaw idealnie i policz winnera z aktualnych kątów
+    bottleAngle = wantedBottle;
+
+    const winIdx = winnerIndexFromAngles(bottleAngle, wheelAngle, total);
+    const winner = state.names[winIdx];
+
+    if (winner && !state.drawn.some(n => n.toLowerCase() === winner.toLowerCase())) {
+      state.drawn.push(winner);
+    }
+
+    saveState();
+    resultEl.firstChild.nodeValue = winner || "—";
+
+    spinning = false;
+    spinBtn.disabled = false;
   }
 
   requestAnimationFrame(frame);
 }
 
-
-// ===== EVENTS =====
-spinBtn.addEventListener("click", spin);
-
-
 // ===== INIT =====
 function init() {
   loadState();
-
-  // jeśli ktoś odpali od razu index.html bez settings — przywróć domyślne
-  if (!state.names.length) state.names = [...DEFAULT_NAMES];
-
+  if (!state.names.length) state.names = ["Brak imion"];
   saveState();
+
   resizeCanvasForHiDPI();
   drawWheel();
+
+  lastT = performance.now();
+  requestAnimationFrame(tick);
 }
 
-init();
+spinBtn.addEventListener("click", spin);
 
 window.addEventListener("resize", () => {
   resizeCanvasForHiDPI();
   drawWheel();
 });
+
+init();
