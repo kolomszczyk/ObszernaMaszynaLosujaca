@@ -13,11 +13,19 @@ body{
   color:var(--text);
 }
 
-/* Wrapper ma równe marginesy */
 .wrap{
-  padding-left: var(--sideMargin);
-  padding-right: var(--sideMargin);
+  position:relative;
+  z-index:5;
+  max-width:980px;
+  margin:0 auto;
+  display:grid;
+  gap:14px;
+  place-items:center;
+
+  padding-left: 90px;
+  padding-right: 90px;
 }
+
 
 h1{
   font-size: clamp(30px, 5vw, 52px);
@@ -165,7 +173,7 @@ a.btnLink{
   font-weight: 800;
 }
 
-/* Settings na dole po prawej, w tym samym marginesie */
+/* Settings na dole po prawej, w tym samym marginesie
 .settingsRight{
   position: fixed;
   right: calc(var(--sideMargin) - 16px);
@@ -174,7 +182,14 @@ a.btnLink{
   padding: 10px 12px;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
+} */
+
+.settingsRight{
+  position: fixed;
+  right: 32px;
+  bottom: 16px;
 }
+
 
 
 .bigSpin{
@@ -207,9 +222,13 @@ html, body{
   overflow-x: hidden;
 }
 
+@media (max-width: 700px){
+  .wrap{
+    padding-left: 40px;
+    padding-right: 40px;
+  }
 
-@media (max-height: 700px){
-  h1{ font-size: 32px; }
-  .bigSpin{ font-size: 26px; padding: 16px 28px; }
-  canvas{ max-width: 420px; }
+  .settingsRight{
+    right: 16px;
+  }
 }

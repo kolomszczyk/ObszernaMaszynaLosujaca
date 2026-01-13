@@ -101,6 +101,20 @@ const spinBtn = document.getElementById("spinBtn");
 let angle = 0;
 let spinning = false;
 
+function normAngle(a) {
+  const twopi = Math.PI * 2;
+  return ((a % twopi) + twopi) % twopi;
+}
+
+// Kąt (absolutny), przy którym segment o indeksie `index` jest pod wskaźnikiem u góry
+function angleForWinnerIndex(index, total) {
+  const pointer = Math.PI * 1.5;          // góra (270°)
+  const slice = (Math.PI * 2) / total;
+  // Rysujesz segmenty od: start = angle + i*slice, więc żeby środek segmentu był pod wskaźnikiem:
+  return normAngle(pointer - (index + 0.5) * slice);
+}
+
+
 function resizeCanvasForHiDPI() {
   const cssW = canvas.clientWidth || 560;
   const cssH = canvas.clientHeight || 560;
@@ -157,6 +171,7 @@ function drawWheel() {
   const names = state.names.length ? state.names : ["Brak imion"];
   const slice = (Math.PI * 2) / names.length;
 
+  // ===== SEGMENTY =====
   for (let i = 0; i < names.length; i++) {
     const start = angle + i * slice;
     const end = start + slice;
@@ -173,6 +188,7 @@ function drawWheel() {
     ctx.strokeStyle = "rgba(255,255,255,.12)";
     ctx.stroke();
 
+    // tekst
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(start + slice / 2);
@@ -183,6 +199,7 @@ function drawWheel() {
     ctx.restore();
   }
 
+  // ===== ŚRODEK =====
   ctx.beginPath();
   ctx.arc(cx, cy, radius * 0.25, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(0,0,0,.3)";
@@ -190,14 +207,22 @@ function drawWheel() {
 
   drawBottle(cx, cy, radius * 0.4);
 
+  // ===== STRZAŁKA (W DÓŁ, ZAWSZE WIDOCZNA) =====
+  const arrowW = 14;
+  const arrowH = 20;
+
+  // pozycja czubka strzałki (nie wyjdzie poza canvas)
+  const tipY = Math.max(12, cy - radius + 6);
+
   ctx.beginPath();
-  ctx.moveTo(cx, cy - radius - 6);
-  ctx.lineTo(cx - 14, cy - radius + 20);
-  ctx.lineTo(cx + 14, cy - radius + 20);
+  ctx.moveTo(cx, tipY);                     // czubek (w dół)
+  ctx.lineTo(cx - arrowW, tipY - arrowH);  // lewy górny
+  ctx.lineTo(cx + arrowW, tipY - arrowH);  // prawy górny
   ctx.closePath();
   ctx.fillStyle = "#fff";
   ctx.fill();
 }
+
 
 // ===== SPIN LOGIC =====
 function angleToLandOnIndex(index, total) {
@@ -226,17 +251,26 @@ function spin() {
     return;
   }
 
+  const twopi = Math.PI * 2;
+  const norm = (a) => ((a % twopi) + twopi) % twopi;
+
   const total = state.names.length;
   const idx = state.names.findIndex(n => n.toLowerCase() === winner.toLowerCase());
-  const finalAngle = angleToLandOnIndex(Math.max(0, idx), total);
+
+  // to jest ABSOLUTNY kąt, przy którym zwycięski segment jest pod wskaźnikiem
+  const wantedAngle = angleToLandOnIndex(Math.max(0, idx), total);
 
   spinning = true;
   spinBtn.disabled = true;
 
+  const startAngle = angle;       // może być > 2π
+  const startNorm = norm(startAngle);
 
-  const startAngle = angle;
+  // ile trzeba dodać (0..2π), żeby z aktualnego kąta dojechać do wantedAngle
+  const delta = norm(wantedAngle - startNorm);
+
   const spins = 6 + secureRandomInt(5);
-  const target = startAngle + spins * Math.PI * 2 + finalAngle;
+  const target = startAngle + spins * twopi + delta;
 
   const duration = 2400;
   const t0 = performance.now();
@@ -244,20 +278,22 @@ function spin() {
   function frame(now) {
     const t = Math.min(1, (now - t0) / duration);
     const k = 1 - Math.pow(1 - t, 3);
+
     angle = startAngle + (target - startAngle) * k;
     drawWheel();
 
     if (t < 1) {
       requestAnimationFrame(frame);
     } else {
-      angle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      // ustaw dokładnie na zwycięski kąt (bez mikrorozjazdów)
+      angle = wantedAngle;
+      drawWheel();
 
       if (!state.drawn.some(n => n.toLowerCase() === winner.toLowerCase())) {
         state.drawn.push(winner);
       }
 
       saveState();
-
       resultEl.firstChild.nodeValue = winner;
 
       spinning = false;
@@ -267,6 +303,7 @@ function spin() {
 
   requestAnimationFrame(frame);
 }
+
 
 // ===== EVENTS =====
 spinBtn.addEventListener("click", spin);
