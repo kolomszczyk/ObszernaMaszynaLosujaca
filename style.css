@@ -261,3 +261,37 @@ html, body{
 
   margin: 0 auto;
 }
+
+
+#bottleWrap{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin: center center;
+
+  pointer-events: none;
+  z-index: 6;
+}
+
+#bottle{
+  width: clamp(100px, 25vw, 140px);
+  display: block;
+}
+
+.centerLine{
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  width: 2px;
+  height: 160px;
+
+  background: red;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+
+}

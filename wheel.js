@@ -1,4 +1,6 @@
 const bottle = document.getElementById("bottle");
+const bottleWrap = document.getElementById("bottleWrap");
+
 
 // ===== COOKIE UTILS =====
 const COOKIE_KEY = "wheel_state_v1";
@@ -194,8 +196,10 @@ function tick(now) {
   drawWheel();
 
   if (bottle) {
-    bottle.style.transform =
-      `translate(-50%, -50%) rotate(${bottleAngle}rad)`;
+    // bottle.style.transform =
+    //   `translate(-50%, -50%) rotate(${bottleAngle}rad)`;
+    bottleWrap.style.transform = `translate(-50%, -50%) rotate(${bottleAngle}rad)`;
+
   }
 
   requestAnimationFrame(tick);
