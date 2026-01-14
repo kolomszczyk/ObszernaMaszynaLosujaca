@@ -15,17 +15,19 @@ body{
 }
 
 .wrap{
-  position:relative;
-  z-index:5;
-  max-width:980px;
-  margin:0 auto;
-  display:grid;
-  gap:14px;
-  place-items:center;
+  position: relative;
+  z-index: 5;
+  max-width: 980px;
+  margin: 0 auto;
 
-  padding-left: 90px;
-  padding-right: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding-left: clamp(12px, 5vw, 60px);
+  padding-right: clamp(12px, 5vw, 60px);
 }
+
 
 
 h1{
@@ -236,11 +238,26 @@ html, body{
 
 #bottle{
   position: absolute;
-  width: 140px;
+  width: clamp(100px, 25vw, 140px);
+
   left: 50%;
   top: 50%;
+
   transform: translate(-50%, -50%) rotate(0deg);
-  transition: none;
+  transform-origin: center center;
+
   pointer-events: none;
   z-index: 6;
+}
+
+
+.wheelBox{
+  position: relative;
+  width: min(92vw, 560px);
+  aspect-ratio: 1 / 1;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0 auto;
 }
